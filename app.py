@@ -16,6 +16,7 @@ import copy
 import json
 import os
 import re
+import shutil
 import socket
 import sys
 import threading
@@ -43,6 +44,9 @@ ACH_TTL = 6 * 3600
 _cache_lock = threading.Lock()
 _cache = {"key": None, "ts": 0.0, "value": None}
 _online_cache = {"key": None, "ts": 0.0, "value": None}
+# manual.json 的读-改-写必须串行：打开详情页会自动读成就并 POST /api/manual，
+# 和用户手动点「全部游玩」并发时，两个线程会互相覆盖（实测 300 次里有 64% 丢一条）。
+_manual_lock = threading.Lock()
 
 CONFIG = {"steam_root": steam_local.DEFAULT_STEAM_ROOT}
 CONFIG_PATH = os.path.join(BASE_DIR, "config.json")
@@ -113,12 +117,19 @@ def load_manual():
     except FileNotFoundError:
         return {}
     except (OSError, ValueError) as e:
+        # 读坏了先留一份证据再按空处理 —— 否则下一次保存会把这份记录整体覆盖掉
         print("!! manual.json 读不了（%s），按空处理" % e)
+        try:
+            shutil.copyfile(MANUAL_PATH, MANUAL_PATH + ".bad")
+            print("   已把坏掉的原文件备份成 manual.json.bad")
+        except OSError:
+            pass
         return {}
 
 
 def save_manual(m):
-    tmp = MANUAL_PATH + ".tmp"
+    # tmp 名带上线程 id：万一以后哪里漏了锁，也不至于两个线程抢同一个临时文件
+    tmp = "%s.%d.tmp" % (MANUAL_PATH, threading.get_ident())
     with open(tmp, "w", encoding="utf-8") as f:
         json.dump(m, f, ensure_ascii=False, indent=2, sort_keys=True)
     os.replace(tmp, MANUAL_PATH)
@@ -135,44 +146,48 @@ def _int_or_none(v):
 
 
 def update_manual(appid, payload):
-    """改一款游戏的标记；返回 (新记录或 None, 错误文案)。"""
-    m = load_manual()
-    key = str(int(appid))
+    """改一款游戏的标记；返回 (新记录或 None, 错误文案)。
 
-    if payload.get("clear"):
-        m.pop(key, None)
+    整个读-改-写过程必须拿 _manual_lock —— 这是唯一会丢用户数据的地方。
+    """
+    with _manual_lock:
+        m = load_manual()
+        key = str(int(appid))
+
+        if payload.get("clear"):
+            m.pop(key, None)
+            save_manual(m)
+            return None, ""
+
+        cur = dict(m.get(key) or {})
+        if "done" in payload:
+            cur["done"] = bool(payload.get("done"))
+        if "ach" in payload:
+            v = _int_or_none(payload.get("ach"))
+            cur["ach"] = v
+        if "ach_total" in payload:
+            v = _int_or_none(payload.get("ach_total"))
+            cur["ach_total"] = v
+        if "noach" in payload:
+            # 这个游戏 Steam 那边压根没有成就系统，记一笔，省得每次打开都白问一次
+            cur["noach"] = bool(payload.get("noach"))
+            if cur["noach"]:
+                cur.pop("ach", None)
+                cur.pop("ach_total", None)
+        # 总数不能比已完成还小，直接夹一下，省得页面显示 12/8
+        if cur.get("ach") is not None and cur.get("ach_total"):
+            if cur["ach"] > cur["ach_total"]:
+                cur["ach_total"] = cur["ach"]
+        cur["at"] = int(time.time())
+        if payload.get("source"):
+            cur["source"] = str(payload["source"])[:12]
+
+        if cur.get("done") or cur.get("ach") is not None or cur.get("ach_total") or cur.get("noach"):
+            m[key] = cur
+        else:
+            m.pop(key, None)          # 全都清空了就别留个空壳
         save_manual(m)
-        return None, ""
-
-    cur = dict(m.get(key) or {})
-    if "done" in payload:
-        cur["done"] = bool(payload.get("done"))
-    if "ach" in payload:
-        v = _int_or_none(payload.get("ach"))
-        cur["ach"] = v
-    if "ach_total" in payload:
-        v = _int_or_none(payload.get("ach_total"))
-        cur["ach_total"] = v
-    if "noach" in payload:
-        # 这个游戏 Steam 那边压根没有成就系统，记一笔，省得每次打开都白问一次
-        cur["noach"] = bool(payload.get("noach"))
-        if cur["noach"]:
-            cur.pop("ach", None)
-            cur.pop("ach_total", None)
-    # 总数不能比已完成还小，直接夹一下，省得页面显示 12/8
-    if cur.get("ach") is not None and cur.get("ach_total"):
-        if cur["ach"] > cur["ach_total"]:
-            cur["ach_total"] = cur["ach"]
-    cur["at"] = int(time.time())
-    if payload.get("source"):
-        cur["source"] = str(payload["source"])[:12]
-
-    if cur.get("done") or cur.get("ach") is not None or cur.get("ach_total") or cur.get("noach"):
-        m[key] = cur
-    else:
-        m.pop(key, None)          # 全都清空了就别留个空壳
-    save_manual(m)
-    return m.get(key), ""
+        return m.get(key), ""
 
 
 # ------------------------------------------------------------ 自己加的图片
@@ -227,7 +242,9 @@ def image_counts():
         if not n.isdigit():
             continue
         try:
-            c = sum(1 for f in os.listdir(os.path.join(IMAGES_DIR, n)) if not f.startswith("."))
+            d = os.path.join(IMAGES_DIR, n)
+            c = sum(1 for f in os.listdir(d)
+                    if not f.startswith(".") and os.path.isfile(os.path.join(d, f)))
         except OSError:
             continue
         if c:
@@ -333,6 +350,9 @@ def _local_data(account=None, force=False, enrich=False):
         if (not force and not enrich and _cache["key"] == key
                 and now - _cache["ts"] < CACHE_TTL and _cache["value"] is not None):
             cached = dict(_cache["value"])
+            # games 里每个 dict 也要拷一份：apply_manual 会往里写 done/ach/image_count，
+            # 直接改就是把缓存里的对象也改了，并发时还可能撞出 RuntimeError
+            cached["games"] = [dict(g) for g in cached.get("games") or []]
             cached["cached"] = True
             return apply_manual(cached)
 
@@ -497,13 +517,17 @@ class Handler(SimpleHTTPRequestHandler):
                 r = steam_online.fetch_achievements(cfg["api_key"], cfg["steamid"], int(appid))
             except steam_online.OnlineError as e:
                 msg = str(e)
-                # 「这游戏没有成就系统」不是错误，记一笔就别再问了
-                if "没有成就系统" in msg or "400" in msg:
+                # 「这游戏没有成就系统」不是错误，记一笔就别再问了。
+                # **只认 code，不认文案**：那段中文里本身就带「没有成就系统」几个字，
+                # 而 400 还可能来自家庭共享、steamid 写错、游戏下架 —— 早先按文案判断，
+                # 一次误判就把 noach 永久写死，连「🔄 重新读取成就」都救不回来。
+                if getattr(e, "code", "") == "no_stats":
                     rec, _ = update_manual(appid, {"noach": True, "source": "steam"})
                     return self._json({"ok": True, "none": True, "note": msg, "manual": rec})
                 return self._json({"ok": False, "error": msg}, 400)
             rec, _ = update_manual(appid, {
                 "ach": r["achieved"], "ach_total": r["total"], "source": "steam",
+                "noach": False,          # 这回真读到了，把之前可能写死的 noach 清掉
             })
             return self._json({"ok": True, "achieved": r["achieved"], "total": r["total"], "manual": rec})
 
@@ -512,7 +536,8 @@ class Handler(SimpleHTTPRequestHandler):
 
         if parsed.path == "/api/images":
             appid = (q.get("appid") or [""])[0]
-            if not appid.isdigit():
+            # isascii 不能省：'²'.isdigit() 为真但 int('²') 会抛错，把线程打穿
+            if not (appid.isascii() and appid.isdigit()):
                 return self._json({"ok": False, "error": "appid 不对"}, 400)
             return self._json({"ok": True, "appid": int(appid),
                                "images": img_public(appid)})
@@ -523,6 +548,21 @@ class Handler(SimpleHTTPRequestHandler):
         parsed = urllib.parse.urlparse(self.path)
         if parsed.path not in ("/api/config", "/api/manual", "/api/images"):
             return self.send_error(404)
+
+        # 只认本机来源：同浏览器里任何别的网页都能用 text/plain 无预检 POST 过来
+        # （读不到响应所以偷不走 Key，但足以覆写配置或删掉标记）
+        host = (self.headers.get("Host") or "").split(":")[0].strip().lower()
+        if host not in ("127.0.0.1", "localhost", "[::1]"):
+            return self._json({"ok": False, "error": "只接受本机访问"}, 403)
+        origin = (self.headers.get("Origin") or "").strip()
+        if origin:
+            ok_hosts = ("127.0.0.1", "localhost", "[::1]")
+            try:
+                o = urllib.parse.urlparse(origin)
+            except ValueError:
+                o = None
+            if not o or o.scheme not in ("http", "https") or (o.hostname or "") not in ok_hosts:
+                return self._json({"ok": False, "error": "拒绝跨站请求"}, 403)
 
         try:
             length = int(self.headers.get("Content-Length") or 0)

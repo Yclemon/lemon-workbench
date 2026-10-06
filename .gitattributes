@@ -1,0 +1,12 @@
+# run.bat 必须是 CRLF —— 用 LF 存过一版，cmd.exe 会把中文行从中间劈开当命令执行
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+*.py  text eol=crlf
+*.js  text eol=crlf
+*.css text eol=crlf
+*.html text eol=crlf
+*.md  text eol=crlf
+
+*.png binary
+*.jpg binary

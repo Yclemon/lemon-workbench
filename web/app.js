@@ -196,7 +196,8 @@ function filtered() {
     ach: (a, b) => ((b.ach || 0) / (b.ach_total || 1e9)) - ((a.ach || 0) / (a.ach_total || 1e9))
       || (b.ach || 0) - (a.ach || 0),
   }[state.sort];
-  return list.sort(by || by.playtime);
+  // 兜底比较器不能用 by.playtime：state.sort 陈旧时 by 是 undefined，会直接 TypeError 把列表冻住
+  return list.sort(by || ((a, b) => b.playtime_min - a.playtime_min));
 }
 
 /* --------------------------- 渲染 --------------------------- */
@@ -221,7 +222,7 @@ function renderHeader() {
   const sel = $('#accountSel');
   if (!state.accountTouched) {
     sel.innerHTML = d.accounts.map(a =>
-      `<option value="${a.folder}"${acct && a.folder === acct.folder ? ' selected' : ''}>${esc(a.persona_name)}</option>`
+      `<option value="${esc(a.folder)}"${acct && a.folder === acct.folder ? ' selected' : ''}>${esc(a.persona_name)}</option>`
     ).join('') || '<option>（未找到账号）</option>';
     state.account = acct ? acct.folder : null;
   }
@@ -397,10 +398,13 @@ function renderFilters() {
     ['updated', '按最近更新'], ['name', '按名称']];
   if (nAch) sorts.push(['ach', '按成就完成度']);
   const sel = $('#sortSel');
+  // 排序项会随数据增减（「按成就完成度」最后一条记录被清掉就没了），
+  // 这时 state.sort 可能指向一个已经不存在的 key，必须先纠正回来
+  if (!sorts.some(([k]) => k === state.sort)) state.sort = 'playtime';
   if (sel.options.length !== sorts.length) {
     sel.innerHTML = sorts.map(([k, l]) => `<option value="${k}">${l}</option>`).join('');
-    sel.value = state.sort;
   }
+  sel.value = state.sort;
 }
 
 function renderGrid() {
@@ -830,8 +834,10 @@ function achNote(msg) {
 function needAchFetch(g) {
   if (!(state.cfg && state.cfg.configured)) return false;
   if (!g || g.ach_none) return false;
+  // 手填过的一律不碰 —— 这里必须在 ach_total 判断**之前**：
+  // 只填了「已完成」没填「总数」时 ach_total 是空的，早先会直落 return true 把人家手填的数覆盖掉
+  if (g.mark_source && g.mark_source !== 'steam') return false;
   if (g.ach_total) {
-    if (g.mark_source !== 'steam') return false;
     const at = Number(g.ach_at || 0);
     return !at || (Date.now() / 1000 - at) > 6 * 3600;
   }
@@ -986,6 +992,15 @@ function showFatal(title, rows) {
   window.scrollTo(0, 0);
 }
 
+/* showFatal 把 main 里的东西全内联 display:none 了，重新扫描成功时必须撤回来，
+   否则数据已经读到、页面却还只剩那张红牌，非得手工 F5 */
+function clearFatal() {
+  const f = $('#fatal');
+  if (f && f.hidden) return;
+  for (const el of document.querySelectorAll('main > *')) el.style.display = '';
+  if (f) { f.hidden = true; f.innerHTML = ''; }
+}
+
 /* --------------------------- 数据加载 --------------------------- */
 
 async function load(opts) {
@@ -1000,14 +1015,19 @@ async function load(opts) {
     if (o.online) qs.set('online', '1');
     if (state.account && state.accountTouched) qs.set('account', state.account);
     const r = await fetch('/api/data' + (qs.toString() ? '?' + qs : ''));
-    if (!r.ok) throw new Error('HTTP ' + r.status);
+    if (!r.ok) {
+      // 把服务端那句中文错误带出来，别让用户以为服务挂了
+      const b = await r.json().catch(() => null);
+      throw new Error((b && b.error) || ('HTTP ' + r.status));
+    }
     state.data = await r.json();
+    clearFatal();
     renderAll();
     openFromHash();
   } catch (e) {
     $('#scanInfo').textContent = '读取失败：' + e.message;
     showFatal('连不上本地服务', [
-      '页面是从 <code>' + location.origin + '</code> 打开的，但读数据失败了：<code>' + e.message + '</code>',
+      '页面是从 <code>' + esc(location.origin) + '</code> 打开的，但读数据失败了：<code>' + esc(e.message) + '</code>',
       '服务多半已经关掉了 —— 回到 <code>steam-play</code> 文件夹，<strong>双击 run.bat</strong> 重新起一个。',
       '如果 run.bat 的黑窗口还开着，看它打印的地址，端口不一定是 8770。',
       '弄好之后 → <a href="./">刷新重试</a>',

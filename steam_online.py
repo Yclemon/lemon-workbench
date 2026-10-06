@@ -31,7 +31,16 @@ STEAMID64_BASE = 76561197960265728
 
 
 class OnlineError(Exception):
-    """给用户看的中文错误，不往上抛原始异常。"""
+    """给用户看的中文错误，不往上抛原始异常。
+
+    code 是给程序看的机器可读标记（文案会变，code 不变）：
+      "no_stats" = Steam 明确说这个 appid 没有统计数据（多半就是没成就系统）
+      "http400"  = 其它 400；"http401"/"http403"/"http429"/"timeout"/"offline"…
+    """
+
+    def __init__(self, msg, code=""):
+        super().__init__(msg)
+        self.code = code
 
 
 def account_id_from_steamid64(steamid64) -> int:
@@ -42,7 +51,7 @@ def steamid64_from_account_id(account_id) -> str:
     return str(int(account_id) + STEAMID64_BASE)
 
 
-def _api(path: str, params: dict, timeout: float = 25.0) -> dict:
+def _api(path: str, params: dict, timeout: float = 25.0, code400: str = "http400") -> dict:
     url = API_ROOT + path + "?" + urllib.parse.urlencode(params)
     req = urllib.request.Request(url, headers={"User-Agent": UA})
     try:
@@ -50,22 +59,34 @@ def _api(path: str, params: dict, timeout: float = 25.0) -> dict:
             body = resp.read().decode("utf-8", "replace")
     except urllib.error.HTTPError as e:
         if e.code == 401:
-            raise OnlineError("API Key 无效（Steam 返回 401）。请确认复制完整，或重新申请一个。")
+            raise OnlineError("API Key 无效（Steam 返回 401）。请确认复制完整，或重新申请一个。", "http401")
         if e.code == 403:
-            raise OnlineError("Steam 拒绝了这个 Key（403），可能已被吊销。")
+            raise OnlineError("Steam 拒绝了这个 Key（403），可能已被吊销。", "http403")
         if e.code == 429:
-            raise OnlineError("请求太频繁被 Steam 限流了（429），过几分钟再试。")
+            raise OnlineError("请求太频繁被 Steam 限流了（429），过几分钟再试。", "http429")
         if e.code == 400:
-            raise OnlineError("Steam 说这个请求不成立（400）—— 最常见的原因是这款游戏没有成就系统。")
-        raise OnlineError("Steam 返回 HTTP %d。" % e.code)
+            # Steam 对「这个 appid 没有统计数据」也是回 400，但正文里会写清楚：
+            #   {"playerstats":{"error":"Requested app has no stats","success":false}}
+            # 所以这里读一下正文，只有真的写着 no stats 才敢认成 no_stats。
+            body = ""
+            try:
+                body = e.read().decode("utf-8", "replace")
+            except Exception:                                   # noqa: BLE001
+                pass
+            code = code400
+            if code400 == "no_stats" and "no stats" not in body.lower():
+                code = "http400"
+            raise OnlineError("Steam 说这个请求不成立（400）—— 最常见的原因是这款游戏没有成就系统。",
+                              code)
+        raise OnlineError("Steam 返回 HTTP %d。" % e.code, "http%d" % e.code)
     except socket.timeout:
-        raise OnlineError("连接 Steam 超时，检查一下网络或代理。")
+        raise OnlineError("连接 Steam 超时，检查一下网络或代理。", "timeout")
     except urllib.error.URLError as e:
-        raise OnlineError("连不上 Steam：%s" % (getattr(e, "reason", e),))
+        raise OnlineError("连不上 Steam：%s" % (getattr(e, "reason", e),), "offline")
     try:
         return json.loads(body)
     except ValueError:
-        raise OnlineError("Steam 返回的不是 JSON，可能被网络中间层拦了。")
+        raise OnlineError("Steam 返回的不是 JSON，可能被网络中间层拦了。", "badjson")
 
 
 def resolve_vanity(api_key: str, vanity: str) -> str:
@@ -215,13 +236,15 @@ def fetch_achievements(api_key: str, steamid: str, appid: int) -> dict:
     """
     data = _api("ISteamUserStats/GetPlayerAchievements/v1/", {
         "key": api_key, "steamid": steamid, "appid": int(appid), "l": "schinese",
-    })
+    }, code400="no_stats")
     stats = data.get("playerstats")
     if not isinstance(stats, dict):
-        raise OnlineError("Steam 没返回成就数据（可能是这个游戏没有成就系统）。")
+        raise OnlineError("Steam 没返回成就数据（可能是这个游戏没有成就系统）。", "no_stats")
     if not stats.get("success"):
-        msg = stats.get("error") or "这个游戏没有成就数据。"
-        raise OnlineError("拿不到成就：%s" % msg)
+        # Steam 自己说没有统计数据的措辞就那几种，认出来才敢记「永久没成就」
+        msg = stats.get("error") or ""
+        code = "no_stats" if ("no stats" in msg.lower() or "not have" in msg.lower()) else "statsfail"
+        raise OnlineError("拿不到成就：%s" % (msg or "这个游戏没有成就数据。"), code)
     achs = stats.get("achievements") or []
     total = len(achs)
     achieved = sum(1 for a in achs if a.get("achieved"))
