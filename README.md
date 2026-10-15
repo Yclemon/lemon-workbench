@@ -160,6 +160,7 @@ steam-play/
 ├─ manual.json        存你手填的「全部游玩」和成就数（标过才会生成，可随时删）
 ├─ cache/
 │  └─ appinfo.json    联网补到的游戏名缓存
+├─ docs/              代码审查报告 / 接口测试报告（专家产出，纯文档）
 └─ web/
    ├─ index.html
    ├─ style.css
