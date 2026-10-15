@@ -1,0 +1,19 @@
+# Python 运行时产物
+__pycache__/
+*.pyc
+*.pyo
+
+# 编辑器 / 系统
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# 临时文件
+*.tmp
+
+# 本机排障笔记，不进仓库
+notes/
+
+# 导入过程中的暂存目录
+_sp_hold/
