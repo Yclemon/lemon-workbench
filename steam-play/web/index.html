@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Steam 游玩报告 · 本机</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <span class="logo">◈</span>
+    <div>
+      <h1>Steam 游玩报告</h1>
+      <p class="sub" id="scanInfo">读取本机 Steam 数据…</p>
+    </div>
+  </div>
+  <div class="topActions">
+    <label class="acct">
+      <span>账号</span>
+      <select id="accountSel"></select>
+    </label>
+    <label class="switch" title="把 Steamworks 公共库、Wallpaper Engine、OBS 等非游戏也显示出来">
+      <input type="checkbox" id="showTools">
+      <span>显示工具/软件</span>
+    </label>
+    <button id="onlineBtn" class="btn ghost" title="用 Steam 官方接口读取账号维度（跨设备）的游玩数据">连接 Steam 账号</button>
+    <button id="refreshBtn" class="btn">重新扫描</button>
+  </div>
+</header>
+
+<main>
+
+  <section class="panel fatal" id="fatal" hidden></section>
+
+  <div class="notice" id="notice" hidden></div>
+
+  <section class="stats" id="stats"></section>
+
+  <section class="panel" id="recentPanel" hidden>
+    <div class="panelHead">
+      <h2>最近两周</h2>
+      <span class="hint">Steam 官方口径，含这台电脑以外的时长</span>
+    </div>
+    <div class="recentWrap" id="recentList"></div>
+  </section>
+
+  <section class="panel" id="topPanel">
+    <div class="panelHead">
+      <h2>游玩时长 Top <span id="topN">10</span></h2>
+      <span class="hint">数字全部取自本机 Steam 存档文件</span>
+    </div>
+    <div class="bars" id="topBars"></div>
+  </section>
+
+  <section class="panel" id="dustPanel">
+    <div class="panelHead">
+      <h2>吃灰雷达</h2>
+      <span class="hint">买了没打开过 / 很久没碰的游戏 —— 从左边开始最容易有惊喜</span>
+    </div>
+    <div class="dustWrap" id="dustList"></div>
+  </section>
+
+  <section class="panel">
+    <div class="panelHead">
+      <h2>全部游戏 <span class="count" id="listCount"></span>
+        <span class="hint">点任意一款 → 可标记「全部游玩」、填成就数</span></h2>
+      <div class="controls">
+        <input id="search" class="search" type="search" placeholder="搜索游戏名 / appid…">
+        <select id="sortSel" class="sortSel"></select>
+      </div>
+    </div>
+    <div class="chips" id="chips"></div>
+    <div class="grid" id="grid"></div>
+    <div class="empty" id="empty" hidden>没有符合条件的游戏</div>
+  </section>
+
+  <footer class="foot">
+    <span>数据全部来自本机文件，只读不改；图片按需从 Steam CDN 加载，断网时自动用色块代替。</span>
+  </footer>
+
+</main>
+
+<div class="modal" id="modal" hidden>
+  <div class="modalBg" data-close></div>
+  <div class="modalCard" id="modalCard"></div>
+</div>
+
+<div class="modal" id="cfgModal" hidden>
+  <div class="modalBg" data-cfg-close></div>
+  <div class="cfgCard">
+    <button class="closeBtn" data-cfg-close>✕</button>
+    <h3>连接 Steam 账号</h3>
+    <p class="hint">
+      本机文件只记录<b>这台电脑</b>跑过的时长。想知道账号维度的累计时长（别的设备、更早的年份）
+      和「最近两周」，就得走 Steam 官方接口 —— 只需要一个免费的<b>只读</b> API Key，
+      <b>不用也不会要你的 Steam 密码</b>。
+    </p>
+    <ol class="steps">
+      <li>打开 <a href="https://steamcommunity.com/dev/apikey" target="_blank" rel="noreferrer">steamcommunity.com/dev/apikey</a>（需要已登录 + 手机令牌）</li>
+      <li>Domain Name 随便填，比如 <code>localhost</code>，点 Register</li>
+      <li>把拿到的 32 位 Key 和你的 SteamID 填到下面</li>
+    </ol>
+    <label class="field">
+      <span>API Key</span>
+      <input id="cfgKey" type="text" spellcheck="false" autocomplete="off" placeholder="32 位十六进制字符串">
+    </label>
+    <label class="field">
+      <span>SteamID64 或自定义网址名</span>
+      <input id="cfgSid" type="text" spellcheck="false" autocomplete="off" placeholder="7656119… 或 steamcommunity.com/id/ 后面的那串">
+    </label>
+    <label class="switch inline">
+      <input type="checkbox" id="cfgOn">
+      <span>以后启动时自动联网</span>
+    </label>
+    <div class="err" id="cfgErr" hidden></div>
+    <div class="acts">
+      <button id="cfgSave" class="btn">保存并连接</button>
+      <button id="cfgClear" class="btn ghost">清除已存的 Key</button>
+    </div>
+    <p class="hint small" id="cfgNow">尚未配置。</p>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>

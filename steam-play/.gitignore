@@ -1,0 +1,9 @@
+# 你的 Steam API Key 明文在这里，永远不要进版本库
+config.json
+
+# 你自己添加的本地图片，可能很大
+web/images/
+
+# Python 运行时产物
+__pycache__/
+*.pyc
