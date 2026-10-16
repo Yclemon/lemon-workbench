@@ -1,0 +1,25 @@
+# 反编译出来的游戏源码，体积大且属游戏版权内容，不纳入版本管理
+_decomp/
+
+# 提取产物（可由 extract_buildings.py 重新生成）
+buildings.json
+data/
+
+# 第三方反编译工具（ILSpy，10MB 二进制，用 tools/fetch_ilspy.py 重新下载）
+tools/ilspycmd-*/
+
+# 临时调试文件
+_diag*.py
+_t*.py
+_check.py
+_stat.py
+_list.py
+_core.py
+_fix.py
+_gen.py
+_tempchk.py
+
+# 截图与缓存
+_shot.png
+__pycache__/
+*.pyc

@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>缺氧计算查询工具</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="topbar">
+  <h1>缺氧计算查询工具 <span class="ver">眼冒金星 DLC</span></h1>
+  <div class="tabs">
+    <button class="tab on" data-tab="lookup">建筑速查</button>
+    <button class="tab" data-tab="about">关于</button>
+  </div>
+</header>
+
+<main>
+  <!-- ============ 建筑速查 ============ -->
+  <section id="lookup" class="pane on">
+    <div class="controls">
+      <input id="q" type="search" placeholder="搜建筑名 / 效果，例如：电解、制氧、发电…" autocomplete="off">
+      <label class="chk"><input id="onlyCore" type="checkbox"> 只看常用</label>
+      <span id="count" class="count"></span>
+    </div>
+
+    <div class="filters" id="filters"></div>
+
+    <div id="list" class="list"></div>
+    <div id="empty" class="empty" hidden>没有匹配的建筑</div>
+  </section>
+
+  <!-- ============ 关于 ============ -->
+  <section id="about" class="pane">
+    <h2>这个工具是什么</h2>
+    <p>本地只读的缺氧数据查询工具。数据直接从游戏的反编译源码里提取，不联网、不改动任何游戏文件。</p>
+
+    <h2>数据来源</h2>
+    <p id="metaSrc">加载中…</p>
+
+    <h2>字段说明</h2>
+    <dl class="gloss">
+      <dt>耗电</dt><dd>建筑运行时每秒消耗的功率（W）</dd>
+      <dt>发电</dt><dd>发电机满载输出功率（W）</dd>
+      <dt>转换</dt><dd>每秒消耗 / 产出的物质量（kg/s），温度单位 K（开尔文）</dd>
+      <dt>自身发热</dt><dd>建筑运行时机体产生的热量（kW，游戏内单位）</dd>
+      <dt>废气发热</dt><dd>随产物排出的热量（kW）</dd>
+      <dt>建造质量</dt><dd>建造消耗的矿物质量（kg）</dd>
+    </dl>
+
+    <h2>已知局限</h2>
+    <ul>
+      <li>部分建筑的配方由代码动态生成（如金属精炼器按元素表遍历），无法直接抓取，只能以规律形式记录或留空。</li>
+      <li>数值取自游戏源码，但游戏版本更新可能改动。当前对应版本见上方数据来源。</li>
+      <li>只覆盖 64 个常用建筑，非全部建筑。</li>
+    </ul>
+  </section>
+</main>
+
+<script src="app.js"></script>
+</body>
+</html>

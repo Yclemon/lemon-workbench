@@ -1,0 +1,87 @@
+# ONI 建筑数据提取目标
+# 格式: <建筑ID>   # 中文名（注释）
+# 建筑 ID 来自 BuildMenu.cs（游戏自己的建造菜单，权威）
+
+# ===== 氧气 / 气体处理 =====
+Electrolyzer            # 电解器
+MineralDeoxidizer       # 氧气扩散器
+RustDeoxidizer          # 铁锈脱氧机
+AlgaeHabitat            # 藻类箱
+CO2Scrubber             # 碳素脱离器
+AirFilter               # 空气净化器
+
+# ===== 发电 =====
+ManualGenerator         # 人力发电机
+Generator               # 煤炭发电机
+HydrogenGenerator       # 氢气发电机
+MethaneGenerator        # 天然气发电机
+PetroleumGenerator      # 石油发电机
+WoodGasGenerator        # 木料发电机
+SolarPanel              # 太阳能板
+SteamTurbine            # 蒸汽涡轮
+NuclearReactor          # 核反应堆
+
+# ===== 液体 / 气体输送 =====
+LiquidPump              # 液体泵
+GasPump                 # 气体泵
+LiquidMiniPump          # 迷你液体泵
+GasMiniPump             # 迷你气体泵
+LiquidFilter            # 液体过滤器
+GasFilter               # 气体过滤器
+SolidFilter             # 固体过滤器
+LiquidVent              # 排液口
+GasVent                 # 排气口
+
+# ===== 精炼 / 制造 =====
+MetalRefinery           # 金属精炼器
+OilRefinery             # 石油精炼厂
+GlassForge              # 玻璃熔炉
+RockCrusher             # 碎石机
+Kiln                    # 窑炉
+SupermaterialRefinery   # 分子熔炉
+ChemicalRefinery        # 化学精炼厂
+OxyliteRefinery         # 氧化石精炼厂
+AlgaeDistillery         # 藻类蒸馏器
+WaterPurifier           # 净水器
+
+# ===== 种植 / 农业 =====
+Compost                 # 堆肥
+FertilizerMaker         # 肥料合成器
+FarmTile                # 种植砖
+HydroponicFarm          # 水培砖
+PlanterBox              # 种植箱
+FarmStation             # 农业站
+
+# ===== 卫生 =====
+FlushToilet             # 抽水马桶
+Outhouse                # 户外厕所
+WashSink                # 洗手池
+DecontaminationShower   # 除污淋浴间
+
+# ===== 电力 =====
+Battery                 # 电池
+BatteryMedium           # 中型电池
+BatterySmart            # 智能电池
+PowerTransformer        # 小型变压器
+PowerTransformerSmall   # 微型变压器
+WireConfig              # 电线
+WireHighWattage         # 高负荷电线（ID=HighWattageWire，类名词序颠倒）
+
+# ===== 温控 =====
+AirConditioner          # 空气调节器
+LiquidCooledFan         # 液冷风扇
+SpaceHeater             # 空间加热器
+IceMachine              # 制冰机
+IceCooledFan            # 冰风扇
+WaterCooler             # 饮水机
+
+# ===== 储存 =====
+GasReservoir            # 储气库
+LiquidReservoir         # 储液库
+StorageLocker           # 储物箱
+Refrigerator            # 冰箱
+
+# ===== 其他常用 =====
+BottleEmptier           # 瓶子清空器
+GasBottler              # 气体装瓶器
+LiquidBottler           # 液体装瓶器
