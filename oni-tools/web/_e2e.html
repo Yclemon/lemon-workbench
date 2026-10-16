@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head><meta charset="utf-8"><title>供电测算流程测试</title>
+<style>body{font-family:monospace;background:#14171c;color:#dfe5ee;padding:20px}
+.ok{color:#81c784}.bad{color:#e57373}li{margin:4px 0}
+#frame{width:1200px;height:1px;border:0;position:absolute;left:-9999px}</style>
+</head>
+<body>
+<h3>供电测算 —— 搜索/添加/计算 端到端测试</h3>
+<ul id="out"></ul>
+<iframe id="frame" src="/index.html#power"></iframe>
+<script>
+var out = document.getElementById('out');
+var fails = 0;
+function chk(label, cond, extra){
+  if (!cond) fails++;
+  out.insertAdjacentHTML('beforeend', '<li class="'+(cond?'ok':'bad')+'">'+
+    (cond?'PASS':'FAIL')+' '+label+(extra?' — '+extra:'')+'</li>');
+}
+function done(){
+  out.insertAdjacentHTML('beforeend',
+    '<li class="'+(fails?'bad':'ok')+'" style="margin-top:12px;font-weight:bold">'+
+    (fails? fails+' 项失败' : '全部 '+out.children.length+' 项通过')+'</li>');
+}
+var f = document.getElementById('frame');
+f.onload = function(){
+  setTimeout(function(){
+    var d = f.contentDocument, w = f.contentWindow;
+    if (!d || !d.getElementById('powerQ')) {
+      chk('iframe 加载主页面', false, '拿不到 powerQ'); done(); return;
+    }
+    chk('iframe 加载主页面', true);
+
+    var pq = d.getElementById('powerQ');
+    // --- 搜索 ---
+    pq.value = '电解';
+    pq.dispatchEvent(new w.Event('input'));
+    var sug = d.getElementById('powerSuggest');
+    chk('搜索"电解"有建议', sug.children.length > 0,
+        sug.children.length + ' 条');
+    var first = sug.querySelector('.psug');
+    chk('建议第一条是电解器', first && first.textContent.indexOf('电解器') >= 0,
+        first ? first.textContent.trim() : '无');
+
+    // --- 点击添加 ---
+    first.click();
+    var chips = d.getElementById('powerChips');
+    chk('点击后清单出现芯片', chips.querySelectorAll('.pchip').length === 1,
+        chips.querySelectorAll('.pchip').length + ' 个');
+    chk('搜索框已清空', pq.value === '', '"'+pq.value+'"');
+
+    // --- 再加一个: 液体泵 ---
+    pq.value = '液体泵';
+    pq.dispatchEvent(new w.Event('input'));
+    var s2 = d.getElementById('powerSuggest').querySelector('.psug');
+    chk('搜索"液体泵"有结果', !!s2, s2 ? s2.textContent.trim() : '无');
+    if (s2) s2.click();
+
+    // --- 再加一个: 气体泵 ---
+    pq.value = '气体泵';
+    pq.dispatchEvent(new w.Event('input'));
+    var s3 = d.getElementById('powerSuggest').querySelector('.psug');
+    if (s3) s3.click();
+
+    var n = d.getElementById('powerChips').querySelectorAll('.pchip').length;
+    chk('清单共 3 项', n === 3, n + ' 项');
+
+    // --- 校验结果 ---
+    // 电解器 120W + 液体泵 240W + 气体泵 240W = 600W
+    // （已与 calc_engine.py 交叉核对: power Electrolyzer:1 LiquidPump:1 GasPump:1）
+    var res = d.getElementById('powerResult');
+    var txt = res.textContent;
+    chk('结果含合计 600 W', /合计\s*600\s*W/.test(txt.replace(/\s+/g,' ')),
+        (txt.match(/合计[\s\S]{0,24}/) || [''])[0].replace(/\s+/g,' '));
+    chk('结果含 0.6 kW', /0\.6\s*kW/.test(txt));
+    // 发电机: 600W -> 煤炭1台、氢气1台、天然气1台、石油1台、木料2台
+    chk('列出 5 种发电机', res.querySelectorAll('.calc-card').length === 6,
+        res.querySelectorAll('.calc-card').length + ' 个卡片(含用电清单)');
+    chk('煤炭发电机 ×1 输出 600W',
+        /煤炭发电机\s*×1[\s\S]{0,60}600\s*W/.test(txt.replace(/\s+/g,' ')));
+    chk('木料发电机 ×2', /木料发电机\s*×2/.test(txt.replace(/\s+/g,' ')));
+    chk('燃料克数已算(煤 1 kg/s)', /1\s*kg\/s/.test(txt));
+
+    // --- 改数量: 电解器 1 -> 5 台 ---
+    var numIn = d.getElementById('powerChips').querySelector('.pchip-n');
+    numIn.value = '5';
+    numIn.dispatchEvent(new w.Event('input', {bubbles:true}));
+    // 电解器 5×120 = 600W，加两个泵 240×2 = 480W，合计 1080W = 1.08 kW
+    var t2 = d.getElementById('powerResult').textContent.replace(/\s+/g,' ');
+    chk('电解器改成 5 台后合计 1080W',
+        /合计\s*1080\s*W/.test(t2), (t2.match(/合计\s*[\d.]+\s*W/) || [''])[0]);
+    chk('合计 1.08 kW', /1\.08\s*kW/.test(t2));
+
+    // --- 删除 ---
+    d.getElementById('powerChips').querySelector('.pchip-x').click();
+    var n2 = d.getElementById('powerChips').querySelectorAll('.pchip').length;
+    chk('删除后剩 2 项', n2 === 2, n2 + ' 项');
+
+    // --- 清空 ---
+    d.getElementById('powerClear').click();
+    var n3 = d.getElementById('powerChips').querySelectorAll('.pchip').length;
+    chk('清空后 0 项', n3 === 0, n3 + ' 项');
+    chk('清空后显示提示', d.getElementById('powerResult').textContent.indexOf('还没添加') >= 0);
+
+    // --- 制氧: 切到机器模式 ---
+    var radio = d.querySelector('input[name="oxyMode"][value="machine"]');
+    radio.click();
+    chk('切机器模式后 人口框隐藏',
+        d.getElementById('oxyPopBox').hasAttribute('hidden') &&
+        d.getElementById('oxyPopBox').offsetParent === null,
+        'hidden=' + d.getElementById('oxyPopBox').hasAttribute('hidden'));
+    chk('切机器模式后 设备框显示',
+        !d.getElementById('oxyMachBox').hasAttribute('hidden'));
+    chk('设备下拉已填充',
+        d.getElementById('oxyMachine').options.length >= 5,
+        d.getElementById('oxyMachine').options.length + ' 项');
+
+    // 选铁锈脱氧机 x3
+    var sel = d.getElementById('oxyMachine');
+    sel.value = 'RustDeoxidizer';
+    sel.dispatchEvent(new w.Event('change'));
+    var cnt = d.getElementById('oxyCount');
+    cnt.value = '3';
+    cnt.dispatchEvent(new w.Event('input', {bubbles:true}));
+    var ot = d.getElementById('oxyResult').textContent;
+    chk('3台铁锈脱氧机 养 17 人', /17/.test(ot) && ot.indexOf('可养活') >= 0,
+        (ot.match(/可养活[\s\S]{0,20}/) || [''])[0].replace(/\s+/g,' '));
+    chk('3台铁锈 产量 1710 g/s', /1710/.test(ot));
+    chk('3台铁锈 耗电 180W', /180\s*W/.test(ot));
+
+    done();
+  }, 1200);
+};
+</script>
+</body></html>

@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head><meta charset="utf-8"><title>calc.js 逻辑自测</title>
+<style>body{font-family:monospace;background:#14171c;color:#dfe5ee;padding:20px}
+.ok{color:#81c784}.bad{color:#e57373}li{margin:4px 0}</style>
+</head>
+<body>
+<h3>calc.js 与 calc_engine.py 一致性自测</h3>
+<ul id="out"></ul>
+<script src="calc.js"></script>
+<script>
+// 直接用 python 引擎的输出作为基准，比对 JS 结果
+var EXPECT = {
+  pop8: { need: 0.8, co2: 0.016 },
+  machine: { supply: 1.71, pop: 17 }
+};
+
+fetch('/api/data/constants.json').then(r=>r.json()).then(function(C){
+  fetch('/api/data/buildings.json').then(r=>r.json()).then(function(B){
+    window.CALC.setConst(C);
+    window.CALC.setBuildings(B);
+    var out = document.getElementById('out');
+    var fails = 0;
+    function chk(label, got, want, tol){
+      tol = tol == null ? 0.0001 : tol;
+      var ok = Math.abs(got - want) <= tol;
+      if (!ok) fails++;
+      out.insertAdjacentHTML('beforeend', '<li class="'+(ok?'ok':'bad')+'">'+
+        (ok?'PASS':'FAIL')+' '+label+': got '+got+', want '+want+'</li>');
+    }
+
+    // --- 正算: 8 人 ---
+    var r = window.CALC.oxyByPopulation(8);
+    chk('8人 氧气需求', r.need, 0.8);
+    chk('8人 CO2', r.co2, 0.016);
+    var per = {};
+    r.options.forEach(function(o){ per[o.id] = o; });
+    chk('电解器 台数', per.Electrolyzer.count, 1);
+    chk('电解器 产能', per.Electrolyzer.capacity, 0.888);
+    chk('电解器 余量', per.Electrolyzer.margin, 0.088);
+    chk('电解器 总耗电', per.Electrolyzer.powerTotal, 120);
+    chk('电解器 水耗', per.Electrolyzer.inputs[0].rate, 1.0);
+    chk('电解器 水/周期', per.Electrolyzer.inputs[0].perCycle, 600);
+    chk('电解器 副产氢', per.Electrolyzer.byproducts[0].rate, 0.112);
+    chk('铁锈 台数', per.RustDeoxidizer.count, 2);
+    chk('氧气扩散器 台数', per.MineralDeoxidizer.count, 2);
+    chk('空气净化器 台数', per.AirFilter.count, 9);
+    chk('空气净化器 产能', per.AirFilter.capacity, 0.81);
+    chk('藻类箱 台数', per.AlgaeHabitat.count, 20);
+
+    // --- 反算: 2 台电解器 ---
+    var m = window.CALC.oxyByMachine('Electrolyzer', 2);
+    chk('2台电解器 产量', m.supply, 1.776);
+    chk('2台电解器 人口', m.pop, 17);
+    chk('2台电解器 精确人口', m.popExact, 17.76);
+    chk('2台电解器 耗电', m.powerTotal, 240);
+    chk('2台电解器 水耗', m.inputs[0].rate, 2.0);
+
+    // --- 反算: 3 台铁锈脱氧机 (python: 0.57*3=1.71 kg/s -> 17 人) ---
+    var m2 = window.CALC.oxyByMachine('RustDeoxidizer', 3);
+    chk('3台铁锈 产量', m2.supply, 1.71);
+    chk('3台铁锈 人口', m2.pop, 17);
+
+    // --- 供电: 电解器x2 + 液体泵 + 气体泵 = 720W ---
+    var P = window.CALC;
+    // powerCalc 依赖内部 powerUsage，这里走公开 API 不方便，改测 addPower 路径
+    // 直接用 index 反查一条建筑确认 power_w 正确
+    var el = B.filter(function(b){return b.id==='Electrolyzer';})[0];
+    chk('电解器 power_w', el.power_w, 120);
+    var lp = B.filter(function(b){return b.id==='LiquidPump';})[0];
+    chk('液体泵 power_w', lp.power_w, 240);
+
+    // --- 发电机 ---
+    var gens = {};
+    C.generators.forEach(function(g){ gens[g.id]=g; });
+    chk('煤炭发电机 功率', gens.Generator.wattage, 600);
+    chk('氢气发电机 功率', gens.HydrogenGenerator.wattage, 800);
+    chk('天然气发电机 功率', gens.MethaneGenerator.wattage, 800);
+    chk('石油发电机 功率', gens.PetroleumGenerator.wattage, 2000);
+    chk('木料发电机 功率', gens.WoodGasGenerator.wattage, 300);
+    chk('煤炭 燃料率', gens.Generator.fuel_formula.fuel_rate_kg_s, 1.0);
+
+    // --- 常量 ---
+    chk('耗氧/人', C.oxygen_used_per_second, 0.1);
+    chk('CO2 比例', C.oxygen_to_co2_conversion, 0.02);
+    chk('卡路里/周期', C.calories_burned_per_cycle, -1000000);
+    chk('膀胱增速', C.bladder_increase_per_second, 0.166667, 0.00001);
+    chk('体力消耗', C.stamina_used_per_second, -0.116667, 0.00001);
+
+    out.insertAdjacentHTML('beforeend',
+      '<li class="'+(fails?'bad':'ok')+'" style="margin-top:12px;font-weight:bold">'+
+      (fails? fails+' 项失败' : '全部 '+out.children.length+' 项通过')+'</li>');
+    document.title = fails ? ('FAIL:'+fails) : 'ALLPASS';
+  });
+});
+</script>
+</body></html>

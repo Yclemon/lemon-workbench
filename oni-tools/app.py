@@ -21,7 +21,8 @@ HOST = "127.0.0.1"
 
 # 允许前端读取的数据文件（白名单，防止目录穿越）
 ALLOWED = {"buildings.json", "elements.json", "recipes.json", "meta.json",
-           "rooms.json", "tags.json", "buildings_rooms.json"}
+           "rooms.json", "tags.json", "buildings_rooms.json",
+           "constants.json", "build_names_zh.json"}
 
 
 class Handler(SimpleHTTPRequestHandler):
@@ -71,6 +72,15 @@ def main():
         print(f"错误: 找不到前端目录 {WEB}")
         return 1
     os.makedirs(DATA, exist_ok=True)
+
+    # 数据源在项目根目录，前端统一通过 /api/data/ 读；这里把根目录的
+    # constants.json 与 build_names_zh.json 也纳入（DATA 优先，根目录兜底）
+    for name in ALLOWED:
+        if not os.path.isfile(os.path.join(DATA, name)):
+            src = os.path.join(HERE, name)
+            if os.path.isfile(src):
+                import shutil
+                shutil.copyfile(src, os.path.join(DATA, name))
 
     n = 0
     bpath = os.path.join(DATA, "buildings.json")

@@ -13,6 +13,8 @@
   <div class="tabs">
     <button class="tab on" data-tab="lookup">建筑速查</button>
     <button class="tab" data-tab="rooms">房间规划</button>
+    <button class="tab" data-tab="oxy">制氧测算</button>
+    <button class="tab" data-tab="power">供电测算</button>
     <button class="tab" data-tab="about">关于</button>
   </div>
 </header>
@@ -55,6 +57,55 @@
     <div id="rresult" class="rresult"></div>
   </section>
 
+  <!-- ============ 制氧测算 ============ -->
+  <section id="oxy" class="pane">
+    <div class="room-intro">
+      <p>算清楚<strong>多少人要多少氧</strong>、<strong>几台机器够用</strong>，以及机器要喝多少水和电。</p>
+      <p class="dim" id="calcInfo">加载中…</p>
+    </div>
+
+    <div class="controls">
+      <label class="chk"><input type="radio" name="oxyMode" value="pop" checked> 按人口算机器</label>
+      <label class="chk"><input type="radio" name="oxyMode" value="machine"> 按机器算人口</label>
+    </div>
+
+    <div id="oxyPopBox" class="controls">
+      <label for="oxyPop">复制人数量</label>
+      <input id="oxyPop" type="number" min="1" max="999" value="8">
+      <span class="dim">例如 8</span>
+    </div>
+
+    <div id="oxyMachBox" class="controls" hidden>
+      <label for="oxyMachine">制氧设备</label>
+      <select id="oxyMachine"></select>
+      <input id="oxyCount" type="number" min="1" max="999" value="1">
+      <span class="dim">台</span>
+    </div>
+
+    <div id="oxyResult" class="calc-result"></div>
+  </section>
+
+  <!-- ============ 供电测算 ============ -->
+  <section id="power" class="pane">
+    <div class="room-intro">
+      <p>把要用电的建筑加进来，算出<strong>总耗电</strong>和<strong>需要几台发电机</strong>、每种发电机要烧多少燃料。</p>
+      <p class="dim">只列有耗电量的建筑；发电机本身不耗电，不会出现在搜索里。</p>
+      <p class="dim">目前收录 25 个耗电建筑（核心清单内）。搜不到的建筑说明数据里还没收录它的耗电值，可以到「建筑速查」里确认。</p>
+    </div>
+
+    <div class="controls">
+      <input id="powerQ" type="search" placeholder="搜耗电建筑，例如：电解器、液泵、液冷机…" autocomplete="off">
+    </div>
+    <div id="powerSuggest" class="psuggest"></div>
+
+    <div id="powerChips" class="pchips"></div>
+    <div class="controls">
+      <button id="powerClear" class="rclear">清空清单</button>
+    </div>
+
+    <div id="powerResult" class="calc-result"></div>
+  </section>
+
   <!-- ============ 关于 ============ -->
   <section id="about" class="pane">
     <h2>这个工具是什么</h2>
@@ -73,17 +124,27 @@
       <dt>建造质量</dt><dd>建造消耗的矿物质量（kg）</dd>
     </dl>
 
+    <h2>测算的取值</h2>
+    <dl class="gloss">
+      <dt>每人耗氧</dt><dd>100 g/s（游戏源码常量），呼出二氧化碳 2 g/s</dd>
+      <dt>周期</dt><dd>600 秒，燃料与原料的「kg/周期」按此换算</dd>
+      <dt>满载</dt><dd>耗电按建筑满载功率累加；发电机台数按总耗电除以单台功率向上取整</dd>
+    </dl>
+
     <h2>已知局限</h2>
     <ul>
       <li>部分建筑的配方由代码动态生成（如金属精炼器按元素表遍历），无法直接抓取，只能以规律形式记录或留空。</li>
       <li>数值取自游戏源码，但游戏版本更新可能改动。当前对应版本见上方数据来源。</li>
       <li>建筑速查覆盖 64 个常用建筑；房间规划额外覆盖 186 个与房间判定相关的建筑。</li>
       <li>房间规划的判定依据游戏源码的房间约束规则，但实际游戏里还要考虑建筑朝向、装饰物摆放等，工具只做格数与条件核算。</li>
+      <li>制氧测算的用氧量取游戏源码常量（每名复制人 100 g/s）；实际呼吸量受气压、技能等影响，这里的余量建议留一点。</li>
+      <li>供电测算按建筑满载功率累加，不含电线损耗与发电机启停；燃料消耗按满载计算，实际会随负载波动。</li>
     </ul>
   </section>
 </main>
 
 <script src="app.js"></script>
 <script src="rooms.js"></script>
+<script src="calc.js"></script>
 </body>
 </html>

@@ -44,6 +44,27 @@
 建筑在源码里各自声明了 `RoomConstraints` 标签（如抽水马桶带 `FlushToiletType`），
 工具把标签和房间的约束规则做匹配。**房间大小 = 内部空气格数**（不含砖块本身）。
 
+**制氧测算** —— 两向都能算：
+
+| 模式 | 输入 | 输出 |
+|---|---|---|
+| 按人口算机器 | 有几个复制人 | 每种制氧设备各要几台、够不够、余量多少 |
+| 按机器算人口 | 几台什么设备 | 能养活几个人、耗多少水和电 |
+
+每名复制人每秒消耗 **100 g 氧气**、呼出 **2 g 二氧化碳**（游戏源码常量）。
+5 种制氧设备可以横向对比：电解器、铁锈脱氧机、氧气扩散器、空气净化器、藻类箱。
+顺手也算出机器要喝多少水（按「kg/周期」换算，一个周期 600 秒）。
+
+**供电测算** —— 把要用电的建筑加进清单，算出：
+
+| 指标 | 说明 |
+|---|---|
+| 用电清单 | 每个建筑几台、单台功率、小计，以及总耗电 |
+| 发电机配比 | 用煤炭/氢气/天然气/石油/木料发电机分别要几台、余量多少 |
+| 燃料消耗 | 每种方案每天要烧多少燃料（kg/s 与 kg/周期） |
+
+同一个用电量下，5 种发电机各自的台数和燃料需求会并排列出来，方便权衡烧什么。
+
 ---
 
 ## 数据是怎么来的
@@ -79,6 +100,14 @@ build_names_zh.json  （453 个建筑的中文名）
 中文名不是手写的，是从**游戏自带的官方中文语言包**里取的，所以和游戏内显示一致
 （`Cot` → 床铺，`Lavatory` → 抽水马桶，`Mess Table` → 小餐桌）。
 
+制氧与供电测算的常量多走一条链路：
+
+```
+_decomp/MinionConfig.cs（小人代谢）+ 各制氧设备 *Config.cs
+   ↓ extract_constants.py
+constants.json       （耗氧/卡路里/膀胱等常量 + 5 台制氧设备 + 5 种发电机）
+```
+
 这么做的原因：Wiki 的数值可能滞后好几个版本，而源码是**权威且当前**的。
 
 ### 几个真实例子
@@ -104,12 +133,23 @@ build_names_zh.json  （453 个建筑的中文名）
 
 3. **只覆盖 64 个建筑**，不是游戏全部建筑。覆盖的是最常用的一批。
 
-4. **发电机燃料公式有三种写法**（3 参数 / 6 参数 / 手填 Formula 对象），
-   工具能识别前两种。天然气、石油发电机的公式是手填对象，暂时抓不到，显示为空。
+4. **发电机燃料公式有五种写法**（3 参数 / 6 参数 / 裸字符串 / `InputItem` 数组 / 手填 Formula 对象），
+   工具能识别前四种。5 种发电机的燃料现在都抓到了；若后续版本新增手填对象形式会显示为空。
 
-5. **房间规划只做格数与条件核算。**
+   注意：**发电机在建筑速查里没有「耗电」是正常的** —— 工具把「耗电」（`EnergyConsumptionWhenActive`）
+   和「发电」（`GeneratorWattageRating`）分成两个字段。发电机只发电不耗电。
+
+5. **供电测算只列有耗电值的建筑**（当前 25 个，都在 64 个核心清单内）。
+   聚合器、液冷机等不在核心清单里的建筑搜不到 —— 想加的话要先把它们加进
+   `target_buildings.txt` 再重跑提取脚本。搜不到时页面会明确提示，不会静默漏算。
+
+6. **房间规划只做格数与条件核算。**
    实际游戏里还要考虑建筑朝向、装饰物的具体摆放位置、房间高度连续性等，
    工具不算这些。另外 `IS_BACKWALLED`（贴背景墙）这类房间天然满足的条件会被跳过。
+
+7. **测算取的是满载理论值。**
+   耗电按建筑满载功率累加，不含电线损耗与发电机启停；燃料按满载算，实际会随负载波动。
+   制氧的用氧量取源码常量 100 g/s，实际呼吸量受气压等影响，规划时余量建议留一点。
 
 ---
 
@@ -125,27 +165,37 @@ oni-tools/
 ├─ extract_room_buildings.py  合并出 186 栋房间相关建筑
 ├─ build_names.py        从游戏官方中文包提取建筑中文名
 ├─ room_engine.py        房间规划计算引擎（命令行可单跑）
+├─ extract_constants.py  提取小代谢常量 + 制氧设备 + 发电机
+├─ calc_engine.py        制氧/供电测算引擎（命令行可单跑）
 ├─ target_room_buildings.txt  186 栋目标建筑清单
 ├─ data/                 给前端用的数据（提取产物的副本，不进 Git）
 ├─ web/
 │  ├─ index.html
 │  ├─ style.css
 │  ├─ app.js             建筑速查（零依赖原生 JS）
-│  └─ rooms.js           房间规划
+│  ├─ rooms.js           房间规划
+│  ├─ calc.js            制氧测算 / 供电测算
+│  ├─ _selftest.html     calc.js 与 calc_engine.py 的数值一致性自测（34 项）
+│  └─ _e2e.html          供电/制氧交互端到端自测（24 项）
 ├─ tools/                ilspycmd 反编译工具（用 fetch_ilspy.py 重新下载）
 ├─ _decomp/              反编译出来的游戏源码（约 4400 个 .cs，体积大）
 └─ README.md
 ```
 
-### 命令行单跑房间计算
+### 命令行单跑测算
 
-不想开网页时，可以直接问：
+不想开网页时，三个引擎都能直接问：
 
 ```bat
-python room_engine.py 床铺 抽水马桶 洗手池
+python room_engine.py 床铺 抽水马桶 洗手池     :: 房间规划
+python calc_engine.py oxy 8                    :: 8 个人要几台制氧机
+python calc_engine.py oxy --machines Electrolyzer 2   :: 2 台电解器能养几个人
+python calc_engine.py power Electrolyzer:2 LiquidPump:1   :: 用电汇总 + 发电机配比
+python calc_engine.py list                     :: 列出可选的制氧设备与发电机
 ```
 
-输出能构成哪些房间、需要多少格、还缺什么。
+`calc_engine.py` 与网页端的 `calc.js` 是**两套独立实现**，用 `web/_selftest.html`
+交叉核对，保证两边算出的数一致。
 
 ---
 
@@ -175,6 +225,16 @@ copy rooms.json tags.json buildings_rooms.json data\
 
 **顺序有依赖**：`extract_room_buildings.py` 需要 `build_names_zh.json` 来填中文名，
 所以要先跑 `build_names.py`。
+
+**制氧/供电测算的数据：**
+
+```bat
+python extract_constants.py   :: constants.json  小人常量 + 制氧设备 + 发电机
+copy constants.json data\
+```
+
+`extract_constants.py` 从 `_decomp/` 读 `MinionConfig.cs`（小人代谢）和各制氧设备/发电机的
+`*Config.cs`。注意源码里卡路里与体力消耗是**负数**（表示扣除），工具保留原符号。
 
 `extract_tags.py` / `extract_rooms.py` 从 `_decomp/` 读源码；
 `build_names.py` 从**你本机游戏的官方中文语言包**读翻译，路径写在脚本头部

@@ -21,7 +21,7 @@ import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 DECOMP = os.path.join(HERE, "_decomp")
-TARGETS = os.environ.get("ONI_TARGETS") or os.path.join(HERE, "target_buildings.txt")
+TARGETS = os.environ.get("ONI_TARGETS") or os.path.join(HERE, "tools", "target_buildings.txt")
 OUT = os.environ.get("ONI_OUT") or os.path.join(HERE, "buildings.json")
 
 
@@ -184,6 +184,45 @@ def parse_building(src: str, cls: str, note: str) -> dict:
                 "fuel_storage_kg": float(mf4.group(3)),
                 "note": "仅消耗型，尾气/产物需查执行层",
             }
+
+    # 变体: InputItem / OutputItem 数组形式（天然气、石油发电机）
+    #   formula.inputs  = new EnergyGenerator.InputItem[N] { new ...InputItem(GameTags.X, rate, storage) }
+    #   formula.outputs = new EnergyGenerator.OutputItem[N] { new ...OutputItem(SimHashes.Y, rate, ..., temp) }
+    if "fuel_formula" not in rec:
+        mi = re.search(r"InputItem\[\d+\]\s*\{(.*?)\}\s*;", src, re.S)
+        if mi:
+            items = re.findall(
+                r"InputItem\(\s*(?:GameTags|SimHashes)\.(\w+)\s*,\s*("
+                + NONCAP + r")f\s*,\s*(\w+)",
+                mi.group(1),
+            )
+            if items:
+                outs = []
+                mo = re.search(r"OutputItem\[\d+\]\s*\{(.*?)\}\s*;", src, re.S)
+                if mo:
+                    for el, rate, temp in re.findall(
+                            r"OutputItem\(\s*SimHashes\.(\w+)\s*,\s*("
+                            + NONCAP + r")f\s*,\s*store:\s*\w+\s*,\s*"
+                            r"new CellOffset\([^)]*\)\s*,\s*(" + NONCAP + r")f",
+                            mo.group(1)):
+                        outs.append({
+                            "element": el,
+                            "rate_kg_s": float(rate),
+                            "temp_k": float(temp),
+                        })
+                first = items[0]
+                store = None
+                if first[2].replace(".", "").isdigit():
+                    store = float(first[2])
+                rec["fuel_formula"] = {
+                    "fuel": first[0],
+                    "fuel_rate_kg_s": float(first[1]),
+                    "fuel_storage_kg": store,
+                    "outputs": outs,
+                    "note": ("InputItem/OutputItem 数组形式"
+                             if store is not None
+                             else "存储量用变量 %s 表达" % first[2]),
+                }
 
     # --- 发热 ---
     v = grab_float(src, r"SelfHeatKilowattsWhenActive\s*=\s*(" + NUM + r")f")

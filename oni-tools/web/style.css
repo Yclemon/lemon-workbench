@@ -76,6 +76,8 @@ main { padding: 20px; max-width: 1200px; margin: 0 auto; }
 .pane.on { display: block; }
 
 /* ---------- 控件 ---------- */
+/* hidden 属性必须压过 .controls 的 display:flex，否则藏不住 */
+[hidden] { display: none !important; }
 .controls {
   display: flex;
   align-items: center;
@@ -332,3 +334,121 @@ main { padding: 20px; max-width: 1200px; margin: 0 auto; }
 .rcard.partial .rbar i { background: var(--warn); }
 .rcard.bad .rbar i { background: var(--danger); }
 .rhint { color: var(--fg3); font-size: 12px; margin-top: 4px; font-style: italic; }
+
+/* ================= 制氧测算 / 供电测算 ================= */
+#oxy input[type="number"], #power input[type="number"], select {
+  background: var(--bg2); border: 1px solid var(--line);
+  border-radius: var(--radius); color: var(--fg);
+  padding: 8px 11px; font-size: 14px; font-family: inherit;
+}
+#oxy input[type="number"] { width: 88px; font-variant-numeric: tabular-nums; }
+select { cursor: pointer; min-width: 180px; }
+#oxy input[type="number"]:focus, select:focus { outline: none; border-color: var(--accent); }
+#oxy .controls label[for], #power .controls label[for] { color: var(--fg2); font-size: 13px; }
+
+.calc-result { display: grid; gap: 10px; margin-top: 14px; }
+.calc-result h3 {
+  font-size: 13px; font-weight: 600; color: var(--fg2);
+  margin: 8px 0 0; letter-spacing: .04em;
+}
+.calc-head {
+  display: flex; gap: 10px; flex-wrap: wrap;
+  margin-top: 4px;
+}
+.calc-stat {
+  flex: 1 1 150px; background: var(--bg2); border: 1px solid var(--line);
+  border-radius: var(--radius); padding: 11px 14px;
+  display: flex; flex-direction: column; gap: 3px;
+}
+.calc-stat.hi { border-color: var(--accent); }
+.calc-stat .k { color: var(--fg3); font-size: 12px; }
+.calc-stat .v {
+  font-size: 21px; font-weight: 600; color: var(--fg);
+  font-variant-numeric: tabular-nums;
+}
+.calc-stat.hi .v { color: var(--accent); }
+.calc-stat .v small { font-size: 12px; color: var(--fg3); font-weight: 400; }
+.calc-stat .sub { color: var(--fg3); font-size: 12px; }
+
+.calc-cards {
+  display: grid; gap: 8px;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+}
+.calc-card {
+  background: var(--bg2); border: 1px solid var(--line);
+  border-left: 3px solid var(--accent); border-radius: var(--radius);
+  padding: 10px 13px;
+}
+.calc-card-head {
+  display: flex; align-items: baseline; gap: 8px;
+  margin-bottom: 7px; padding-bottom: 6px;
+  border-bottom: 1px solid var(--line);
+}
+.calc-card-head strong { font-size: 14px; }
+.calc-badge {
+  margin-left: auto; background: var(--bg3); color: var(--accent);
+  border-radius: 4px; padding: 1px 7px; font-size: 12px;
+  font-weight: 600; font-variant-numeric: tabular-nums;
+}
+.calc-row {
+  display: flex; align-items: baseline; gap: 7px;
+  font-size: 12.5px; padding: 2.5px 0; color: var(--fg2);
+}
+.calc-row span { color: var(--fg3); }
+.calc-row span:first-child { flex: 0 0 auto; }
+.calc-row b {
+  color: var(--fg); font-variant-numeric: tabular-nums;
+  font-weight: 600; margin-left: auto;
+}
+.calc-row em {
+  color: var(--fg3); font-style: normal; font-size: 11.5px;
+  font-variant-numeric: tabular-nums; flex: 0 0 auto;
+}
+.calc-row em.ok, .calc-row b.ok { color: var(--accent2); }
+.calc-row em.bad, .calc-row b.bad { color: var(--danger); }
+.calc-row.total {
+  border-top: 1px solid var(--line); margin-top: 6px;
+  padding-top: 7px; font-size: 13.5px;
+}
+.calc-row.total b { color: var(--accent); font-size: 15px; }
+.calc-row.bad b { color: var(--danger); }
+.calc-card .dim, .calc-result .dim { color: var(--fg3); font-size: 13px; }
+
+/* ---------- 供电: 搜索建议 ---------- */
+.psuggest { display: grid; gap: 6px; margin-bottom: 10px; }
+.psuggest:empty { display: none; }
+.psug {
+  display: flex; align-items: baseline; gap: 8px;
+  background: var(--bg2); border: 1px solid var(--line);
+  border-radius: var(--radius); color: var(--fg2);
+  padding: 8px 12px; font-size: 13px; font-family: inherit;
+  cursor: pointer; text-align: left;
+}
+.psug:hover { border-color: var(--accent); color: var(--fg); }
+.psug em {
+  margin-left: auto; color: var(--accent); font-style: normal;
+  font-variant-numeric: tabular-nums; font-weight: 600;
+}
+
+/* ---------- 供电: 已选清单 ---------- */
+.pchips { display: flex; gap: 7px; flex-wrap: wrap; margin-bottom: 12px; }
+.pchips:empty { display: none; }
+.pchip {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: var(--bg2); border: 1px solid var(--line);
+  border-radius: var(--radius); padding: 5px 8px 5px 11px;
+  font-size: 13px; color: var(--fg2);
+}
+.pchip-n {
+  width: 52px; background: var(--bg); border: 1px solid var(--line);
+  border-radius: 4px; color: var(--fg); padding: 3px 6px;
+  font-size: 12.5px; font-family: inherit;
+  font-variant-numeric: tabular-nums; text-align: center;
+}
+.pchip-n:focus { outline: none; border-color: var(--accent); }
+.pchip-x {
+  background: none; border: none; color: var(--fg3);
+  font-size: 16px; line-height: 1; cursor: pointer; padding: 0 2px;
+  font-family: inherit;
+}
+.pchip-x:hover { color: var(--danger); }

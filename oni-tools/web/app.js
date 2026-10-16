@@ -21,7 +21,14 @@ var ELEM_CN = {
   PollutedWater: '污水', Slime: '菌泥', IgneousRock: '火成岩',
   CrushedRock: '碎石', Regolith: '沙尘', BleachStone: '漂白石',
   Magma: '岩浆', Steam: '蒸汽', LiquidOxygen: '液氧', LiquidHydrogen: '液氢',
-  Vacuum: '真空', Salt: '盐'
+  Vacuum: '真空', Salt: '盐',
+  // 发电机燃料等特殊元素名（游戏里叫 CombustibleLiquid 的是石油系燃料）
+  CombustibleLiquid: '石油燃料', Methane: '天然气',
+  RefinedMetal: '精炼金属', RawMetal: '原矿金属', Metal: '金属',
+  CarbonFibre: '碳纤维', Ceramic: '陶瓷', TungstenGas: '钨气',
+  Sulfur: '硫', SulfurGas: '硫气', LiquidSulfur: '液硫',
+  UraniumOre: '铀矿', EnrichedUranium: '浓缩铀', DepletedUranium: '贫铀',
+  Radium: '镭', DiamondDust: '钻石粉尘'
 };
 
 function elemCN(id) {
