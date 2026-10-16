@@ -259,3 +259,76 @@ main { padding: 20px; max-width: 1200px; margin: 0 auto; }
   .gloss { grid-template-columns: 1fr; gap: 2px 0; }
   .gloss dd { margin-bottom: 8px; }
 }
+
+/* ---------- 房间规划 ---------- */
+.room-intro { margin-bottom: 16px; }
+.room-intro p { margin: 0 0 6px; color: var(--fg2); font-size: 13px; }
+.room-intro .dim { color: var(--fg3); font-size: 12px; }
+.room-intro strong { color: var(--accent); }
+
+.rsel {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  margin-bottom: 10px; padding: 8px 10px;
+  background: var(--bg2); border: 1px solid var(--line); border-radius: var(--radius);
+}
+.rsel-label { color: var(--fg3); font-size: 12px; }
+.rchips { display: flex; gap: 6px; flex-wrap: wrap; }
+.rchip {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 2px 4px 2px 9px; border-radius: 999px;
+  background: var(--bg3); border: 1px solid var(--line);
+  font-size: 12px; color: var(--fg);
+}
+.rchip button {
+  background: none; border: none; color: var(--fg3); cursor: pointer;
+  font-size: 14px; line-height: 1; padding: 0 3px; border-radius: 50%;
+}
+.rchip button:hover { color: var(--danger); background: var(--bg); }
+.rclear {
+  margin-left: auto; background: none; border: 1px solid var(--line);
+  color: var(--fg3); font-size: 12px; padding: 3px 10px;
+  border-radius: var(--radius); cursor: pointer;
+}
+.rclear:hover { color: var(--danger); border-color: var(--danger); }
+
+.rsuggest { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 6px; }
+.rsug {
+  display: flex; justify-content: space-between; align-items: center; gap: 8px;
+  padding: 7px 10px; background: var(--bg2); border: 1px solid var(--line);
+  border-radius: var(--radius); cursor: pointer; font-size: 13px; text-align: left;
+  color: var(--fg); width: 100%;
+}
+.rsug:hover { border-color: var(--accent); }
+.rsug .sz { color: var(--fg3); font-size: 11px; font-variant-numeric: tabular-nums; }
+.rsug .tg { color: var(--fg3); font-size: 11px; }
+.rsug-none { color: var(--fg3); font-size: 13px; padding: 8px 2px; }
+
+.rresult { display: grid; gap: 10px; margin-top: 14px; }
+.rcard {
+  background: var(--bg2); border: 1px solid var(--line);
+  border-radius: var(--radius); padding: 12px 14px;
+}
+.rcard.ok { border-left: 3px solid var(--accent2); }
+.rcard.partial { border-left: 3px solid var(--warn); }
+.rcard.bad { border-left: 3px solid var(--danger); }
+.rcard-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.rcard-name { font-size: 15px; font-weight: 600; }
+.rcard-cat { color: var(--fg3); font-size: 12px; }
+.rcard-size {
+  margin-left: auto; color: var(--accent); font-weight: 600;
+  font-variant-numeric: tabular-nums; font-size: 14px;
+}
+.rcard-size .sub { color: var(--fg3); font-weight: 400; font-size: 12px; }
+.rline { margin-top: 6px; font-size: 12px; color: var(--fg2); }
+.rline .k { color: var(--fg3); }
+.rline .ok { color: var(--accent2); }
+.rline .miss { color: var(--warn); }
+.rline .bad { color: var(--danger); }
+.rbar {
+  height: 4px; background: var(--bg3); border-radius: 2px;
+  margin-top: 9px; overflow: hidden;
+}
+.rbar i { display: block; height: 100%; background: var(--accent2); }
+.rcard.partial .rbar i { background: var(--warn); }
+.rcard.bad .rbar i { background: var(--danger); }
+.rhint { color: var(--fg3); font-size: 12px; margin-top: 4px; font-style: italic; }

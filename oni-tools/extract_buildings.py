@@ -21,8 +21,8 @@ import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 DECOMP = os.path.join(HERE, "_decomp")
-TARGETS = os.path.join(HERE, "target_buildings.txt")
-OUT = os.path.join(HERE, "buildings.json")
+TARGETS = os.environ.get("ONI_TARGETS") or os.path.join(HERE, "target_buildings.txt")
+OUT = os.environ.get("ONI_OUT") or os.path.join(HERE, "buildings.json")
 
 
 def find_source(name: str) -> str | None:

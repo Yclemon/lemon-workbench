@@ -31,6 +31,19 @@
 
 **搜索是双向的** —— 搜中文「电解」「制氧」，也搜英文 `Electrolyzer`、`Oxygen`，还能搜元素名。
 
+**房间规划** —— 选几个想放进房间的建筑，算出：
+
+| 指标 | 说明 |
+|---|---|
+| 能构成哪些房间 | 营房 / 食堂 / 抽水马桶卫生间 / 实验室…共 19 种 |
+| 需要多少格 | 每种房间的尺寸区间（如营房 12~64 格，大厅 32~120 格） |
+| 还缺什么 | 距离建成还差哪件家具（「还缺：洗手池」） |
+| 有什么冲突 | 放了互相排斥的东西（「冲突：不要旱厕」） |
+
+原理：缺氧的房间判定是「用砖块/门围出一块空间，空间内的建筑决定房间类型」。
+建筑在源码里各自声明了 `RoomConstraints` 标签（如抽水马桶带 `FlushToiletType`），
+工具把标签和房间的约束规则做匹配。**房间大小 = 内部空气格数**（不含砖块本身）。
+
 ---
 
 ## 数据是怎么来的
@@ -39,13 +52,32 @@
 
 ```
 游戏 Assembly-CSharp.dll
-   ↓ 反编译
+   ↓ 反编译（ilspycmd）
 _decomp/*.cs   （4410 个源文件）
    ↓ extract_buildings.py  正则解析
-data/buildings.json   （64 个建筑）
+data/buildings.json   （64 个常用建筑）
    ↓
 网页展示
 ```
+
+房间规划的数据多走了两条链路：
+
+```
+_decomp/*Config.cs
+   ↓ extract_tags.py  抓 AddTag(RoomConstraints.ConstraintTags.X)
+tags.json            （186 栋建筑 → 房间标签）
+   ↓
+_decomp/RoomConstraints.cs + ROOMS.cs
+   ↓ extract_rooms.py
+rooms.json           （19 种房间的约束规则）
+
+游戏 strings_preinstalled_zh_klei.po（官方中文翻译）
+   ↓ build_names.py  用 <link="建筑ID"> 反查中文
+build_names_zh.json  （453 个建筑的中文名）
+```
+
+中文名不是手写的，是从**游戏自带的官方中文语言包**里取的，所以和游戏内显示一致
+（`Cot` → 床铺，`Lavatory` → 抽水马桶，`Mess Table` → 小餐桌）。
 
 这么做的原因：Wiki 的数值可能滞后好几个版本，而源码是**权威且当前**的。
 
@@ -75,6 +107,10 @@ data/buildings.json   （64 个建筑）
 4. **发电机燃料公式有三种写法**（3 参数 / 6 参数 / 手填 Formula 对象），
    工具能识别前两种。天然气、石油发电机的公式是手填对象，暂时抓不到，显示为空。
 
+5. **房间规划只做格数与条件核算。**
+   实际游戏里还要考虑建筑朝向、装饰物的具体摆放位置、房间高度连续性等，
+   工具不算这些。另外 `IS_BACKWALLED`（贴背景墙）这类房间天然满足的条件会被跳过。
+
 ---
 
 ## 文件结构
@@ -84,22 +120,40 @@ oni-tools/
 ├─ run.bat               双击启动
 ├─ app.py                本地服务（127.0.0.1:8781，纯标准库）
 ├─ extract_buildings.py  从反编译源码提取建筑数据
-├─ buildings.json        原始提取结果
-├─ data/
-│  └─ buildings.json     给前端用的数据
+├─ extract_tags.py       提取建筑的房间标签
+├─ extract_rooms.py      提取房间类型与约束规则
+├─ extract_room_buildings.py  合并出 186 栋房间相关建筑
+├─ build_names.py        从游戏官方中文包提取建筑中文名
+├─ room_engine.py        房间规划计算引擎（命令行可单跑）
+├─ target_room_buildings.txt  186 栋目标建筑清单
+├─ data/                 给前端用的数据（提取产物的副本，不进 Git）
 ├─ web/
 │  ├─ index.html
 │  ├─ style.css
-│  └─ app.js             零依赖原生 JS
+│  ├─ app.js             建筑速查（零依赖原生 JS）
+│  └─ rooms.js           房间规划
+├─ tools/                ilspycmd 反编译工具（用 fetch_ilspy.py 重新下载）
 ├─ _decomp/              反编译出来的游戏源码（约 4400 个 .cs，体积大）
 └─ README.md
 ```
+
+### 命令行单跑房间计算
+
+不想开网页时，可以直接问：
+
+```bat
+python room_engine.py 床铺 抽水马桶 洗手池
+```
+
+输出能构成哪些房间、需要多少格、还缺什么。
 
 ---
 
 ## 重新生成数据
 
 如果游戏更新了，想刷新数值：
+
+**建筑速查的数据：**
 
 ```bat
 python extract_buildings.py
@@ -109,9 +163,26 @@ copy buildings.json data\buildings.json
 `extract_buildings.py` 会遍历 `_decomp/` 目录，按内置的 64 建筑清单查找对应的
 `*Config.cs` 并解析。
 
-**注意**：清单里写的是建筑类名（如 `Electrolyzer`），脚本会自动优先找
-`ElectrolyzerConfig.cs`（配置类）而不是 `Electrolyzer.cs`（执行层组件）——
-这两者同名但内容完全不同，抓错了会缺 ID 和转换率。
+**房间规划的数据：**
+
+```bat
+python extract_tags.py             :: tags.json        建筑 -> 房间标签
+python extract_rooms.py            :: rooms.json       19 种房间的约束规则
+python build_names.py              :: build_names_zh.json   建筑中文名
+python extract_room_buildings.py   :: buildings_rooms.json  合并成 186 栋
+copy rooms.json tags.json buildings_rooms.json data\
+```
+
+**顺序有依赖**：`extract_room_buildings.py` 需要 `build_names_zh.json` 来填中文名，
+所以要先跑 `build_names.py`。
+
+`extract_tags.py` / `extract_rooms.py` 从 `_decomp/` 读源码；
+`build_names.py` 从**你本机游戏的官方中文语言包**读翻译，路径写在脚本头部
+（`SteamLibrary\steamapps\common\OxygenNotIncluded\...\strings_preinstalled_zh_klei.po`），
+换机器要改。
+
+**注意**：清单里写的是建筑类名，脚本会自动优先找 `XxxConfig.cs`（配置类）而不是
+`Xxx.cs`（执行层组件）—— 这两者同名但内容完全不同，抓错了会缺 ID 和转换率。
 
 ---
 

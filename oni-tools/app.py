@@ -20,7 +20,8 @@ PORT = 8781
 HOST = "127.0.0.1"
 
 # 允许前端读取的数据文件（白名单，防止目录穿越）
-ALLOWED = {"buildings.json", "elements.json", "recipes.json", "meta.json"}
+ALLOWED = {"buildings.json", "elements.json", "recipes.json", "meta.json",
+           "rooms.json", "tags.json", "buildings_rooms.json"}
 
 
 class Handler(SimpleHTTPRequestHandler):

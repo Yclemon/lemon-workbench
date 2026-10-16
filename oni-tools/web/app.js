@@ -292,17 +292,36 @@ function bind() {
 
   document.querySelectorAll('.tab').forEach(function (t) {
     t.addEventListener('click', function () {
-      document.querySelectorAll('.tab').forEach(function (x) { x.classList.remove('on'); });
-      document.querySelectorAll('.pane').forEach(function (x) { x.classList.remove('on'); });
-      t.classList.add('on');
-      document.getElementById(t.dataset.tab).classList.add('on');
+      switchTab(t.dataset.tab);
     });
   });
+
+  // 支持 #rooms / #about 直接切页，并响应浏览器前进后退
+  window.addEventListener('hashchange', function () {
+    var h = (location.hash || '').replace(/^#/, '');
+    if (h) switchTab(h);
+  });
+}
+
+// 切换到某个标签页（供点击与 hash 路由共用）
+function switchTab(name) {
+  var target = document.querySelector('.tab[data-tab="' + name + '"]');
+  if (!target) return;
+  document.querySelectorAll('.tab').forEach(function (x) { x.classList.remove('on'); });
+  document.querySelectorAll('.pane').forEach(function (x) { x.classList.remove('on'); });
+  target.classList.add('on');
+  var pane = document.getElementById(name);
+  if (pane) pane.classList.add('on');
 }
 
 // ---------- 启动 ----------
 function boot() {
   bind();
+
+  // 初始 hash 直接定位到对应标签页
+  var h0 = (location.hash || '').replace(/^#/, '');
+  if (h0 && document.querySelector('.tab[data-tab="' + h0 + '"]')) switchTab(h0);
+
   fetch('/api/data/buildings.json')
     .then(function (r) {
       if (!r.ok) throw new Error('HTTP ' + r.status);

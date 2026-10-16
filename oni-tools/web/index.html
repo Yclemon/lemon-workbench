@@ -12,6 +12,7 @@
   <h1>缺氧计算查询工具 <span class="ver">眼冒金星 DLC</span></h1>
   <div class="tabs">
     <button class="tab on" data-tab="lookup">建筑速查</button>
+    <button class="tab" data-tab="rooms">房间规划</button>
     <button class="tab" data-tab="about">关于</button>
   </div>
 </header>
@@ -29,6 +30,29 @@
 
     <div id="list" class="list"></div>
     <div id="empty" class="empty" hidden>没有匹配的建筑</div>
+  </section>
+
+  <!-- ============ 房间规划 ============ -->
+  <section id="rooms" class="pane">
+    <div class="room-intro">
+      <p>选择想放进房间的建筑，下面会算出<strong>能构成哪些房间</strong>、<strong>需要多少格</strong>，以及<strong>还差什么</strong>。</p>
+      <p class="dim">缺氧的房间判定：用砖块/门围出一块空间，空间内的建筑决定房间类型。房间大小 = 内部空气格数（不含砖块本身）。</p>
+    </div>
+
+    <div class="controls">
+      <input id="rq" type="search" placeholder="搜建筑名，例如：床铺、抽水马桶、研究站…" autocomplete="off">
+      <span id="rcount" class="count"></span>
+    </div>
+
+    <div id="rsel" class="rsel" hidden>
+      <span class="rsel-label">已选：</span>
+      <span id="rchips" class="rchips"></span>
+      <button id="rclear" class="rclear">清空</button>
+    </div>
+
+    <div id="rsuggest" class="rsuggest"></div>
+
+    <div id="rresult" class="rresult"></div>
   </section>
 
   <!-- ============ 关于 ============ -->
@@ -53,11 +77,13 @@
     <ul>
       <li>部分建筑的配方由代码动态生成（如金属精炼器按元素表遍历），无法直接抓取，只能以规律形式记录或留空。</li>
       <li>数值取自游戏源码，但游戏版本更新可能改动。当前对应版本见上方数据来源。</li>
-      <li>只覆盖 64 个常用建筑，非全部建筑。</li>
+      <li>建筑速查覆盖 64 个常用建筑；房间规划额外覆盖 186 个与房间判定相关的建筑。</li>
+      <li>房间规划的判定依据游戏源码的房间约束规则，但实际游戏里还要考虑建筑朝向、装饰物摆放等，工具只做格数与条件核算。</li>
     </ul>
   </section>
 </main>
 
 <script src="app.js"></script>
+<script src="rooms.js"></script>
 </body>
 </html>

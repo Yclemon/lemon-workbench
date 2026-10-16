@@ -1,9 +1,13 @@
 # 反编译出来的游戏源码，体积大且属游戏版权内容，不纳入版本管理
 _decomp/
 
-# 提取产物（可由 extract_buildings.py 重新生成）
+# 提取产物（可由 extract_*.py 重新生成）
 buildings.json
 data/
+rooms.json
+tags.json
+buildings_rooms.json
+build_names_zh.json
 
 # 第三方反编译工具（ILSpy，10MB 二进制，用 tools/fetch_ilspy.py 重新下载）
 tools/ilspycmd-*/
@@ -18,8 +22,18 @@ _core.py
 _fix.py
 _gen.py
 _tempchk.py
+_po*.py
+_pcs*.py
+_fill*.py
+_cmp.py
+_rchk.py
+_chk*.py
+_gen*.py
+_patch*.py
+_rc*.py
 
 # 截图与缓存
 _shot.png
+_*.png
 __pycache__/
 *.pyc
