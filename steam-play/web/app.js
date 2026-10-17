@@ -87,7 +87,9 @@ function hueOf(appid) { return (appid * 47) % 360; }
 function placeholder(name, appid, cls) {
   const h = hueOf(appid);
   const ch = esc((name || '?').trim().charAt(0) || '?');
-  return `<div class="${cls}" style="background:linear-gradient(135deg,hsl(${h} 44% 90%),hsl(${(h + 40) % 360} 40% 80%));color:hsl(${h} 42% 27%)">${ch}</div>`;
+  /* 明度交给 CSS 变量：深色底上用暗底亮字，浅色底上用亮底暗字。
+     写死成浅色渐变的话，一旦换成浅底主题，占位块就会和页面糊成一片。 */
+  return `<div class="${cls}" style="background:linear-gradient(135deg,hsl(${h} 38% var(--phL, 20%)),hsl(${(h + 40) % 360} 34% var(--phL2, 15%)));color:hsl(${h} 62% var(--phTextL, 72%))">${ch}</div>`;
 }
 function imgTag(appid, name, urls, cls) {
   const first = urls[0](appid);
@@ -229,11 +231,11 @@ function renderHeader() {
   const libs = d.libraries.map(l => l.path + (l.exists ? '' : '(缺失)')).join(' · ');
   let extra = '';
   if (d.unnamed_count) {
-    extra = ` &nbsp;·&nbsp; <a href="#" id="enrichLink" style="color:var(--orange);text-decoration:none">补全 ${d.unnamed_count} 个游戏名（联网一次）</a>`;
+    extra = ` &nbsp;·&nbsp; <a href="#" id="enrichLink" style="color:var(--warn);text-decoration:none">补全 ${d.unnamed_count} 个游戏名（联网一次）</a>`;
   }
   const on = onlineInfo();
   const onTxt = on.ok
-    ? ` &nbsp;|&nbsp; <span style="color:var(--green)">🌐 账号数据 ${esc(on.persona || '')} ${on.game_count} 款</span>`
+    ? ` &nbsp;|&nbsp; <span style="color:var(--accent)">🌐 账号数据 ${esc(on.persona || '')} ${on.game_count} 款</span>`
     : '';
   $('#scanInfo').innerHTML =
     `库目录 ${esc(libs)} &nbsp;|&nbsp; 账号 ${esc(acct ? acct.persona_name : '—')} &nbsp;|&nbsp; ` +
@@ -462,7 +464,7 @@ function openDetail(appid) {
   const g = state.data.games.find(x => x.appid === appid);
   if (!g) return;
   const c = classify(g);
-  const SUB = 'font-size:11px;color:var(--dim);font-weight:400';
+  const SUB = 'font-size:11px;color:var(--txt3);font-weight:400';
   const boxes = [
     ['游玩时长', fmtHours(g.playtime_min)],
     ['最后运行', g.last_played ? `${relTime(g.last_played)}<div style="${SUB}">${dateStr(g.last_played)}</div>` : '从未运行'],
@@ -970,6 +972,8 @@ function setHash(h) {
 }
 function openFromHash() {
   if (location.hash === '#cfg') { openCfg(); return; }
+  /* #theme / #theme=xxx 归 theme.js 管，别在这里再开一次详情 */
+  if (location.hash.startsWith('#theme')) return;
   const m = /^#app=(\d+)(?:[&?]tab=(\w+))?$/.exec(location.hash);
   if (!m) return;
   if (m[2] === 'info' || m[2] === 'ach' || m[2] === 'pics') state.tab = m[2];

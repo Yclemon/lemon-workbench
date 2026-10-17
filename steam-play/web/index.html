@@ -26,6 +26,7 @@
       <span>显示工具/软件</span>
     </label>
     <button id="onlineBtn" class="btn ghost" title="用 Steam 官方接口读取账号维度（跨设备）的游玩数据">连接 Steam 账号</button>
+    <button id="themeBtn" class="btn ghost iconBtn" title="换个配色 / 自定义背景色" aria-label="外观设置">🎨</button>
     <button id="refreshBtn" class="btn">重新扫描</button>
   </div>
 </header>
@@ -123,6 +124,78 @@
   </div>
 </div>
 
+<div class="modal" id="themeModal" hidden>
+  <div class="modalBg" data-theme-close></div>
+  <div class="cfgCard themeCard">
+    <button class="closeBtn" data-theme-close>✕</button>
+    <h3>外观</h3>
+    <p class="hint">
+      配色存在<b>这台电脑的浏览器</b>里，换浏览器或清缓存会回到默认。点一下立刻就能看到效果，不用保存。
+    </p>
+
+    <div class="themeSec">
+      <div class="themeLab">配色方案</div>
+      <div class="presets" id="themePresets"></div>
+    </div>
+
+    <div class="themeSec">
+      <div class="themeLab">
+        自定义背景
+        <label class="switch inline mini">
+          <input type="checkbox" id="themeCustomBg">
+          <span>不用预设，自己挑底色</span>
+        </label>
+      </div>
+
+      <div class="themeRows" id="themeBgRows">
+        <label class="themeRow">
+          <span class="themeRowLab">底色</span>
+          <input type="color" id="themeBg" value="#0e1013">
+          <input type="text" class="hexIn" id="themeBgHex" spellcheck="false" autocomplete="off" maxlength="7" placeholder="#0e1013">
+        </label>
+        <label class="themeRow">
+          <span class="themeRowLab">卡片底色</span>
+          <input type="color" id="themeSurface" value="#171a1f">
+          <input type="text" class="hexIn" id="themeSurfaceHex" spellcheck="false" autocomplete="off" maxlength="7" placeholder="#171a1f">
+        </label>
+      </div>
+
+      <div class="themeRow syncRow">
+        <span class="themeRowLab">强调色</span>
+        <span class="hint small" style="margin:0" id="themeAccentNow"></span>
+        <button type="button" class="btn ghost small" id="themeAccentBtn">改强调色</button>
+      </div>
+    </div>
+
+    <div class="themeSec">
+      <div class="themeLab">
+        明暗
+        <span class="hint small" style="margin:0">底色太浅时文字会自动转深，不至于糊成一片</span>
+      </div>
+      <div class="themeRow" style="margin-bottom:0">
+        <span class="themeRowLab tell" id="themeModeNow">自动</span>
+        <label class="switch inline mini" style="margin:0">
+          <input type="checkbox" id="themeForceText">
+          <span>手动指定</span>
+        </label>
+        <select id="themeModeSel" disabled>
+          <option value="dark">浅字（深色底）</option>
+          <option value="light">深字（浅色底）</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="themePrev" id="themePrev"></div>
+
+    <div class="acts">
+      <button type="button" id="themeReset" class="btn ghost">恢复默认</button>
+      <button type="button" id="themeDone" class="btn">完成</button>
+    </div>
+    <p class="hint small">只改颜色，不影响数据读取。顶栏的「连接 Steam 账号」跟这里互不相干。</p>
+  </div>
+</div>
+
+<script src="theme.js"></script>
 <script src="app.js"></script>
 </body>
 </html>
