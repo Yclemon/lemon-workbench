@@ -4,6 +4,13 @@ config.json
 # 你自己添加的本地图片，可能很大
 web/images/
 
+# 本机运行数据 —— 程序自己生成的，每人每台机器都不一样，不该进版本库
+# manual.json   : 你手动标的「这个游戏我玩过了 / 有没有成就系统」
+# cache/appinfo : 游戏名补全缓存，删了重新联网就能再生
+manual.json
+manual.json.bad
+cache/appinfo.json
+
 # Python 运行时产物
 __pycache__/
 *.pyc
