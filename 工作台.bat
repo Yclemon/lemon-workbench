@@ -89,7 +89,7 @@ if exist "diary_server.py" (
   echo   手机连同一个 WiFi，地址看新开那个窗口里打印的
   echo   （用 192.168 开头那个，其余是虚拟网卡）
   echo.
-  start "日记手机阅读" cmd /c "python "%ROOT%diary_server.py""
+  start "日记手机阅读" /D "%ROOT:~0,-1%" python diary_server.py
   timeout /t 4 >nul
 ) else (
   echo.
